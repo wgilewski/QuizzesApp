@@ -1,6 +1,9 @@
 package com.app.quizzesapp.service;
 
-import com.app.quizzesapp.exceptions.MyException;
+
+import com.app.quizzesapp.exception.MyException;
+
+import com.app.quizzesapp.model.Countries;
 import com.app.quizzesapp.model.country.Country;
 import com.app.quizzesapp.model.country.informations.Details;
 import com.app.quizzesapp.repository.CountryRepository;
@@ -10,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+
 import java.io.IOException;
 import java.net.ProxySelector;
 import java.net.URI;
@@ -29,17 +33,20 @@ import java.util.Optional;
 public class CountryService
 {
     private final CountryRepository countryRepository;
+    private static final String jsonFilePath = "countries.json";
+
+
 
     private HttpRequest requestGetAllCountries(final String path) throws URISyntaxException
     {
         return HttpRequest.newBuilder()
-                .uri(new URI(path))
-                .header("X-RapidAPI-Host", "restcountries-v1.p.rapidapi.com")
-                .header("X-RapidAPI-Key", "fd28bf246dmshcd789bbdc72c73cp1e6d91jsn427a4bdf7163")
-                .version(HttpClient.Version.HTTP_2)
-                .timeout(Duration.ofSeconds(10))
-                .GET()
-                .build();
+            .uri(new URI(path))
+            .header("X-RapidAPI-Host", "restcountries-v1.p.rapidapi.com")
+            .header("X-RapidAPI-Key", "fd28bf246dmshcd789bbdc72c73cp1e6d91jsn427a4bdf7163")
+            .version(HttpClient.Version.HTTP_2)
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
     }
 
     private HttpRequest requestGetDistance(final String path) throws URISyntaxException
@@ -69,7 +76,7 @@ public class CountryService
         }
     }
 
-    public Optional<Details> countryDetails(String town1, String town2)
+    public Optional<Details> getDistanceAndCuriosities(String town1, String town2)
     {
         final String apiPath = "https://www.dystans.org/route.json?stops="+town1.replaceAll(" ","+") + "%7C" + town2.replaceAll(" ","+");
 
@@ -111,6 +118,8 @@ public class CountryService
                     .build()
                     .send(requestGetAllCountries(countriesPath),HttpResponse.BodyHandlers.ofString());
 
+
+
             String[] r = response.body().split("\\}\\,\\{");
             r[0] = r[0].replaceAll("\\[\\{","");
             r[249] = r[249].replaceAll("\\}\\]","");
@@ -123,6 +132,8 @@ public class CountryService
                 sb.insert(0,"{");
                 sb.append("}");
                 Country c = g.fromJson(sb.toString(), Country.class);
+
+                System.out.println(c);
                 countries.add(c);
             }
 

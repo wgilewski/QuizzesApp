@@ -1,8 +1,9 @@
 package com.app.quizzesapp.service;
 
-import com.app.quizzesapp.exceptions.MyException;
+import com.app.quizzesapp.exception.MyException;
 import com.app.quizzesapp.model.country.Country;
 import com.app.quizzesapp.model.country.informations.Details;
+import com.app.quizzesapp.model.dto.CountryDto;
 import com.app.quizzesapp.model.dto.QuizDto;
 import com.app.quizzesapp.model.localization.Localization;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +41,9 @@ public class DetailsService
         String myLocalizationTown = myLocalization.get().city;
 
         Map<String,Double> capitalDistance = new HashMap<>();
-        List<Country> capitalsFromQuiz = quizDto.getCountries();
+        List<CountryDto> capitalsFromQuiz = quizDto.getCountries();
 
-        for (Country c : capitalsFromQuiz)
+        for (CountryDto c : capitalsFromQuiz)
         {
             capitalDistance.put(c.getCapital(),getDistance(c.getCapital(),myLocalizationTown)
                     .orElseThrow(() -> new MyException("DISTANCE VALUE IS NULL")));
@@ -51,16 +52,16 @@ public class DetailsService
         Optional<String> result = capitalDistance.entrySet()
                 .stream()
                 .filter(stringDoubleEntry -> stringDoubleEntry.getValue() > 0)
-                .sorted(Comparator.comparing(Map.Entry::getValue))
+                .sorted((o1, o2) -> o2.getValue().compareTo(o1.getValue()))
                 .findFirst()
                 .map(Map.Entry::getKey);
 
-        return countryService.countryDetails(result.get(),myLocalizationTown);
+        return countryService.getDistanceAndCuriosities(result.get(),myLocalizationTown);
     }
 
     public Optional<Double> getDistance(String capital1, String capital2)
     {
-        Optional<Details> details = countryService.countryDetails(capital1,capital2);
+        Optional<Details> details = countryService.getDistanceAndCuriosities(capital1,capital2);
         if (!details.isPresent())
         {
             throw new MyException("DETAILS ARE NULL");

@@ -1,6 +1,6 @@
 package com.app.quizzesapp.service;
 
-import com.app.quizzesapp.exceptions.MyException;
+import com.app.quizzesapp.exception.MyException;
 import com.app.quizzesapp.model.User;
 import com.app.quizzesapp.model.dto.UserDto;
 import com.app.quizzesapp.model.dto.mappers.UserMapper;

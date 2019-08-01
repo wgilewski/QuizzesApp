@@ -1,4 +1,4 @@
-package com.app.quizzesapp.restControllers;
+package com.app.quizzesapp.controller;
 
 import com.app.quizzesapp.model.User;
 import com.app.quizzesapp.model.dto.QuizDto;

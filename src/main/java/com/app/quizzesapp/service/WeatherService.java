@@ -1,6 +1,6 @@
 package com.app.quizzesapp.service;
 
-import com.app.quizzesapp.exceptions.MyException;
+import com.app.quizzesapp.exception.MyException;
 import com.app.quizzesapp.model.weather.Weather;
 import com.google.gson.Gson;
 import org.springframework.stereotype.Service;

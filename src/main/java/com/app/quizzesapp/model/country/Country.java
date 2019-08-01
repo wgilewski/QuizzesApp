@@ -29,15 +29,11 @@ public class Country
     private String alpha3Code;
     private String capital;
     private String region;
-    private String subregion;
     private Integer population;
     private Double area;
     private String nativeName;
 
-    @ElementCollection
-    private List<String>  altSpellings;
-    @ElementCollection
-    private List<String> timezones;
+
     @ElementCollection
     private List<String>  borders;
     @ElementCollection

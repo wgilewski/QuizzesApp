@@ -1,6 +1,6 @@
 package com.app.quizzesapp.service;
 
-import com.app.quizzesapp.exceptions.MyException;
+import com.app.quizzesapp.exception.MyException;
 import com.app.quizzesapp.model.Quiz;
 import com.app.quizzesapp.model.User;
 import com.app.quizzesapp.model.country.Country;
@@ -38,15 +38,16 @@ public class QuizService
     private final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
 
 
-    public Optional<Quiz> generateQuiz(Long userId, Region region)
+    public Optional<Quiz> generateQuiz(Long userId, String region)
     {
-        if (region == null)
+        Optional<User> user = userRepository.findById(userId);
+        if (!user.isPresent())
         {
-            throw new MyException("REGION VALUE IS NULL");
+            throw new MyException("THERE IS NO USER WITH SUCH ID IN DB");
         }
-        if (userId == null)
+        if (!List.of(Region.values()).contains(Region.valueOf(region)))
         {
-            throw new MyException("USER ID IS NULL");
+            throw new MyException("REGION VALUE ERROR");
         }
 
         Quiz quiz = Quiz
@@ -55,12 +56,18 @@ public class QuizService
                 .competition(false)
                 .solved(false)
                 .localDate(LocalDate.now())
-                .countries(generateCountriesToQuiz(region))
+                .countries(generateCountriesToQuiz(Region.valueOf(region)))
                 .answers(new LinkedList<>())
                 .duration(Duration.ofSeconds(0))
                 .score(0)
                 .build();
+
+        if (quiz == null)
+        {
+            throw  new MyException("GENERATING QUIZ ERROR");
+        }
         return Optional.of(quizRepository.save(quiz));
+
     }
 
     public void generateCompetitionQuiz(Long userId)
@@ -74,10 +81,10 @@ public class QuizService
         Optional<Quiz> quiz;
         if (count != 0)
         {
-            throw new MyException("USER ALREADY PARTICIPATED IN THE COMPETITION IN THIS MONTH");
+            throw new MyException("USER HAS ALREADY PARTICIPATED IN THE COMPETITION IN THIS MONTH");
         }
         else {
-            quiz = generateQuiz(userId, Region.ALL);
+            quiz = generateQuiz(userId, "ALL");
             if (quiz.isPresent())
             {
                 quiz.get().setCompetition(true);
@@ -91,15 +98,18 @@ public class QuizService
         {
             throw new MyException("QUIZ ID IS NULL");
         }
-        Quiz quiz = quizRepository.getOne(quizId);
-        if (quiz == null)
+        Optional<Quiz> quiz = quizRepository.findById(quizId);
+        if (!quiz.isPresent())
         {
-            throw new MyException("QUIZ IS NULL");
+            throw new MyException("THERE IS NO QUIZ WITH SUCH ID IN DB");
         }
+        if (quiz.get().isSolved() == true)
+        {
+            throw new MyException("QUIZ IS ALREADY SOLVED");
+        }
+        quiz.get().setStart(LocalTime.now());
 
-        quiz.setStart(LocalTime.now());
-
-        List<Country> countries = quiz.getCountries();
+        List<Country> countries = quiz.get().getCountries();
         if (countries == null)
         {
             throw new MyException("COUNTRY LIST IS NULL");
@@ -132,58 +142,73 @@ public class QuizService
             }
             count++;
         }
-
+        if (quiz == null)
+        {
+            throw new MyException("CHECKING ANSWERS IN QUIZ ERROR");
+        }
         return Optional.of(quizMapper.quizToQuizDto(quiz));
+
     }
 
-    //tested
     public Optional<UserDto> findCompetitionWinner()
     {
-        User winner = quizRepository.findAll()
+        Optional<UserDto> userDto =  Optional.of(quizRepository.findAll()
                 .stream()
                 .filter(quiz -> quiz.isCompetition() == true)
                 .filter(quiz -> quiz.getLocalDate().getMonth().equals(LocalDate.now().getMonth()))
                 .sorted(Comparator.comparing(Quiz::getScore).reversed().thenComparing(Quiz::getDuration))
                 .findFirst()
                 .map(quiz -> quiz.getUser())
-                .get();
+                .map(user -> userMapper.userToUserDto(user))
+                .orElseThrow(() -> new MyException("FINDING WINNER ERROR")));
 
-        return Optional.of(userMapper.userToUserDto(winner));
+        userDto.get().getQuizzes().forEach(quizDto -> quizDto.setCountries(List.of()));
+        userDto.get().getQuizzes().forEach(quizDto -> quizDto.setAnswers(List.of()));
+
+        return userDto;
     }
 
-    //tested
     public List<UserDto> scoreTable()
     {
-        return quizRepository.findAll()
-                .stream()
+
+
+        List<UserDto> users =  findAll().stream()
                 .filter(quiz -> quiz.isCompetition() &&
                         quiz.getLocalDate().getMonth().equals(LocalDate.now().getMonth()))
-                .sorted(Comparator.comparing(Quiz::getScore).reversed().thenComparing(Quiz::getDuration))
+                .sorted(Comparator.comparing(QuizDto::getScore).reversed().thenComparing(QuizDto::getDuration))
                 .map(quiz -> userMapper.userToUserDto(quiz.getUser()))
                 .collect(Collectors.toList());
+
+        users.forEach(userDto -> userDto.getQuizzes().forEach(quizDto -> quizDto.setCountries(List.of())));
+        users.forEach(userDto -> userDto.getQuizzes().forEach(quizDto -> quizDto.setAnswers(List.of())));
+
+        return users;
+
     }
 
-    //tested
-    public List<QuizDto> sortAllByScore(String order)
+    public List<QuizDto> sortAllByScoreWithoutCompetition(String order)
     {
         if (order == null || !order.matches("(asc|desc)")) {
             throw new MyException("ILLEGAL ORDER NAME");
         }
 
-        List<Quiz> sorted = quizRepository
-                .findAll()
+        List<QuizDto> sorted = findAll()
                 .stream()
-                .sorted(Comparator.comparing(Quiz::getScore))
+                .filter(quiz -> quiz.isCompetition() == false)
+                .sorted(Comparator.comparing(QuizDto::getScore))
                 .collect(Collectors.toList());
 
         if (order.equals("desc")) {
             Collections.reverse(sorted);
         }
 
-        return sorted.stream().map(quiz -> quizMapper.quizToQuizDto(quiz)).collect(Collectors.toList());
+        sorted.forEach(quiz -> quiz.setCountries(List.of()));
+        sorted.forEach(quiz -> quiz.setAnswers(List.of()));
+
+        return sorted;
+
     }
 
-    //tested
     public List<QuizDto> sortUserQuizzesByScore(String order, Long userId)
     {
         if (!order.matches("(asc|desc)") || order == null)
@@ -195,10 +220,10 @@ public class QuizService
             throw new MyException("USER ID IS NULL");
         }
 
-        List<Quiz> sorted = quizRepository
-                .findAllByUserId(userId)
+        List<QuizDto> sorted = findAll()
                 .stream()
-                .sorted(Comparator.comparing(Quiz::getScore))
+                .filter(quizDto -> quizDto.getUser().getId().equals(userId))
+                .sorted(Comparator.comparing(QuizDto::getScore))
                 .collect(Collectors.toList());
 
         if (order.equals("desc"))
@@ -206,50 +231,83 @@ public class QuizService
             Collections.reverse(sorted);
         }
 
-        return sorted.stream().map(quiz -> quizMapper.quizToQuizDto(quiz)).collect(Collectors.toList());
+        return sorted;
 
     }
 
-
-    //tested
     public List<QuizDto> findAllQuizzesByUserId(Long userId)
     {
         if (userId == null)
         {
             throw new MyException("USER ID IS NULL");
         }
-        return quizRepository.findAllByUserId(userId).stream().map(quiz -> quizMapper.quizToQuizDto(quiz)).collect(Collectors.toList());
+
+        List<QuizDto> quizzes = findAll()
+                .stream()
+                .filter(quizDto -> quizDto.getUser().getId().equals(userId))
+                .collect(Collectors.toList());
+
+        quizzes.forEach(quizDto -> quizDto.setAnswers(List.of()));
+        quizzes.forEach(quizDto -> quizDto.setCountries(List.of()));
+
+        return quizzes;
     }
 
-
-    //tested
     public Optional<QuizDto> getOneQuiz(Long quizId)
     {
         if (quizId == null)
         {
             throw new MyException("USER ID IS NULL");
         }
-        return Optional.of(quizMapper.quizToQuizDto(quizRepository.getOne(quizId)));
+        Optional<QuizDto> quizDto =  quizRepository.findAll()
+                .stream()
+                .filter(quiz -> quiz.getId().equals(quizId))
+                .map(quiz -> quizMapper.quizToQuizDto(quiz))
+                .findFirst();
+
+        if (quizDto.isPresent())
+        {
+            return quizDto;
+        }throw new MyException("THERE IS NO QUIZ WITH SUCH ID IN DB");
+
     }
 
+    public List<QuizDto> findAll()
+    {
+        List<QuizDto> quizzes = quizRepository.findAll()
+                .stream()
+                .map(quiz -> quizMapper.quizToQuizDto(quiz))
+                .collect(Collectors.toList());
 
-    //tested
+        if (quizzes == null)
+        {
+            throw new MyException("QUIZZES LIST IS NULL");
+        }return quizzes;
+
+
+    }
+
     public List<QuizDto> findAllSolvedOrUnsolvedQuizzes(boolean isSolved, Long userId)
     {
         if (userId == null)
         {
             throw new MyException("USER ID IS NULL");
         }
-        return quizRepository.findAll()
+
+
+
+        List<QuizDto> quizzes = findAll()
                 .stream()
-                .filter(quiz -> quiz.isSolved() == isSolved && quiz.getUser().getId().equals(userId))
-                .map(quiz -> quizMapper.quizToQuizDto(quiz))
+                .filter(quizDto -> quizDto.getUser().getId().equals(userId))
+                .filter(quizDto -> quizDto.isSolved() == isSolved)
                 .collect(Collectors.toList());
+
+        quizzes.forEach(quizDto -> quizDto.setCountries(List.of()));
+        quizzes.forEach(quizDto -> quizDto.setAnswers(List.of()));
+
+        return quizzes;
     }
 
-
-
-    //tested
     public List<Country> generateCountriesToQuiz(Region region)
     {
         if (region == null)

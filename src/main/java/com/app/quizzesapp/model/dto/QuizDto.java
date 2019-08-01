@@ -1,7 +1,6 @@
 package com.app.quizzesapp.model.dto;
 
 import com.app.quizzesapp.model.User;
-import com.app.quizzesapp.model.country.Country;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,12 +25,13 @@ public class QuizDto
     private boolean competition;
     private LocalDate localDate;
     private Integer score;
+
     private LocalTime start;
     private LocalTime end;
 
     private Duration duration;
 
     private User user;
-    private List<Country> countries;
+    private List<CountryDto> countries;
     private List<String> answers;
 }

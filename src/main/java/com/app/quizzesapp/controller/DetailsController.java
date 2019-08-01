@@ -1,4 +1,4 @@
-package com.app.quizzesapp.restControllers;
+package com.app.quizzesapp.controller;
 
 import com.app.quizzesapp.model.country.informations.Details;
 import com.app.quizzesapp.model.dto.QuizDto;
@@ -42,7 +42,7 @@ public class DetailsController
     @GetMapping("/distanceBetweenTwoCountries/{town1}/{town2}")
     public ResponseEntity<Details> distance(@PathVariable String town1, @PathVariable String town2)
     {
-        Optional<Details> informations = countryService.countryDetails(town1, town2);
+        Optional<Details> informations = countryService.getDistanceAndCuriosities(town1, town2);
         if (informations.isPresent()) {
             return ResponseEntity.ok(informations.get());
         }

@@ -1,6 +1,5 @@
 package com.app.quizzesapp.model.dto;
 
-import com.app.quizzesapp.model.Quiz;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,5 +18,5 @@ public class UserDto
     private String name;
     private String surname;
 
-    private List<Quiz> quizzes;
+    private List<QuizDto> quizzes;
 }

@@ -2,6 +2,7 @@ package com.app.quizzesapp.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
+
 import javax.persistence.*;
 import java.util.List;
 
@@ -20,9 +21,10 @@ public class User
     private String name;
     private String surname;
 
-    @JsonIgnore
+
     @OneToMany(mappedBy = "user")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
+    @JsonIgnore
     private List<Quiz> quizzes;
 }

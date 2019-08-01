@@ -15,10 +15,6 @@ public class Localization
     public String city ;
     public String region ;
     public String regionCode ;
-    public String countryName ;
-    public String countryCode ;
-    public String continentName ;
-    public String continentCode ;
     public Double latitude ;
     public Double longitude ;
     public String asn ;
